@@ -9,6 +9,8 @@ from app.core.database import Base
 
 # Import all models here
 from app.models.user import User
+from app.models.driver import Driver
+from app.models.vehicle import Vehicle
 
 config = context.config
 

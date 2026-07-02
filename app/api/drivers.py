@@ -14,7 +14,7 @@ from app.services.driver_service import (
     update_driver,
     delete_driver,
 )
-from app.dependencies.auth import get_current_user
+from app.dependencies.auth import get_current_admin
 
 router = APIRouter(
     prefix="/drivers",
@@ -26,7 +26,7 @@ router = APIRouter(
 def create_driver_api(
     driver: DriverCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_admin),
 ):
     return create_driver(db, driver)
 
@@ -34,7 +34,7 @@ def create_driver_api(
 @router.get("/", response_model=list[DriverResponse])
 def get_drivers_api(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_admin),
 ):
     return get_all_drivers(db)
 
@@ -43,7 +43,7 @@ def get_drivers_api(
 def get_driver_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_admin),
 ):
     return get_driver_by_id(db, driver_id)
 
@@ -53,7 +53,7 @@ def update_driver_api(
     driver_id: int,
     driver: DriverUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_admin),
 ):
     return update_driver(
         db,
@@ -66,7 +66,7 @@ def update_driver_api(
 def delete_driver_api(
     driver_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_current_admin),
 ):
     return delete_driver(
         db,
