@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.core.security import verify_token
 from app.models.user import User
 
+
 # JWT Bearer Authentication
 security = HTTPBearer()
 
@@ -48,7 +49,7 @@ def get_current_user(
 def get_current_admin(
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "Admin":
+    if current_user.role.lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
@@ -60,7 +61,7 @@ def get_current_admin(
 def get_current_dispatcher(
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "Dispatcher":
+    if current_user.role.lower() != "dispatcher":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Dispatcher access required",
@@ -72,7 +73,7 @@ def get_current_dispatcher(
 def get_current_driver(
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "Driver":
+    if current_user.role.lower() != "driver":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Driver access required",
