@@ -2,11 +2,11 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.driver import Driver
+from app.models.delivery import Delivery
 from app.schemas.driver import DriverCreate, DriverUpdate
 
 
 def create_driver(db: Session, driver: DriverCreate):
-    # Check if license already exists
     existing_license = (
         db.query(Driver)
         .filter(Driver.license_number == driver.license_number)
@@ -19,7 +19,6 @@ def create_driver(db: Session, driver: DriverCreate):
             detail="License number already exists."
         )
 
-    # Check if phone already exists
     existing_phone = (
         db.query(Driver)
         .filter(Driver.phone_number == driver.phone_number)
@@ -84,6 +83,21 @@ def delete_driver(
     driver_id: int,
 ):
     driver = get_driver_by_id(db, driver_id)
+
+    assigned_delivery = (
+        db.query(Delivery)
+        .filter(Delivery.driver_id == driver_id)
+        .first()
+    )
+
+    if assigned_delivery:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Cannot delete this driver because the driver "
+                "is assigned to an existing delivery."
+            ),
+        )
 
     db.delete(driver)
     db.commit()

@@ -8,6 +8,16 @@ function Vehicles() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [editingId, setEditingId] = useState(null);
+
+  const [editData, setEditData] = useState({
+    vehicle_number: "",
+    vehicle_type: "",
+    capacity: "",
+    fuel_type: "",
+    status: "Available",
+  });
+
   const [formData, setFormData] = useState({
     vehicle_number: "",
     vehicle_type: "",
@@ -35,9 +45,11 @@ function Vehicles() {
   }, []);
 
   const handleChange = (event) => {
+    const { name, value } = event.target;
+
     setFormData({
       ...formData,
-      [event.target.name]: event.target.value,
+      [name]: value,
     });
   };
 
@@ -73,6 +85,90 @@ function Vehicles() {
       setError(
         error.response?.data?.detail ||
           "Failed to create vehicle."
+      );
+    }
+  };
+
+  const startEditing = (vehicle) => {
+    setError("");
+    setSuccess("");
+
+    setEditingId(vehicle.id);
+
+    setEditData({
+      vehicle_number: vehicle.vehicle_number,
+      vehicle_type: vehicle.vehicle_type,
+      capacity: vehicle.capacity,
+      fuel_type: vehicle.fuel_type,
+      status: vehicle.status,
+    });
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditData({
+      ...editData,
+      [name]: value,
+    });
+  };
+
+  const saveVehicle = async (vehicleId) => {
+    setError("");
+    setSuccess("");
+
+    const updatedVehicle = {
+      vehicle_number: editData.vehicle_number,
+      vehicle_type: editData.vehicle_type,
+      capacity: Number(editData.capacity),
+      fuel_type: editData.fuel_type,
+      status: editData.status,
+    };
+
+    try {
+      await api.put(
+        `/vehicles/${vehicleId}`,
+        updatedVehicle
+      );
+
+      setSuccess("Vehicle updated successfully.");
+      setEditingId(null);
+
+      await fetchVehicles();
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to update vehicle."
+      );
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  const handleDelete = async (vehicleId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this vehicle?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.delete(`/vehicles/${vehicleId}`);
+
+      setSuccess("Vehicle deleted successfully.");
+
+      await fetchVehicles();
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to delete vehicle."
       );
     }
   };
@@ -119,10 +215,10 @@ function Vehicles() {
           <br />
           <input
             type="number"
+            step="0.01"
             name="capacity"
             value={formData.capacity}
             onChange={handleChange}
-            step="0.01"
             required
           />
         </div>
@@ -159,7 +255,9 @@ function Vehicles() {
 
         <br />
 
-        <button type="submit">Create Vehicle</button>
+        <button type="submit">
+          Create Vehicle
+        </button>
       </form>
 
       {success && <p>{success}</p>}
@@ -184,6 +282,7 @@ function Vehicles() {
               <th>Fuel Type</th>
               <th>Status</th>
               <th>Active</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -191,13 +290,132 @@ function Vehicles() {
             {vehicles.map((vehicle) => (
               <tr key={vehicle.id}>
                 <td>{vehicle.id}</td>
-                <td>{vehicle.vehicle_number}</td>
-                <td>{vehicle.vehicle_type}</td>
-                <td>{vehicle.capacity}</td>
-                <td>{vehicle.fuel_type}</td>
-                <td>{vehicle.status}</td>
+
                 <td>
-                  {vehicle.is_active ? "Active" : "Inactive"}
+                  {editingId === vehicle.id ? (
+                    <input
+                      type="text"
+                      name="vehicle_number"
+                      value={editData.vehicle_number}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    vehicle.vehicle_number
+                  )}
+                </td>
+
+                <td>
+                  {editingId === vehicle.id ? (
+                    <input
+                      type="text"
+                      name="vehicle_type"
+                      value={editData.vehicle_type}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    vehicle.vehicle_type
+                  )}
+                </td>
+
+                <td>
+                  {editingId === vehicle.id ? (
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="capacity"
+                      value={editData.capacity}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    vehicle.capacity
+                  )}
+                </td>
+
+                <td>
+                  {editingId === vehicle.id ? (
+                    <input
+                      type="text"
+                      name="fuel_type"
+                      value={editData.fuel_type}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    vehicle.fuel_type
+                  )}
+                </td>
+
+                <td>
+                  {editingId === vehicle.id ? (
+                    <select
+                      name="status"
+                      value={editData.status}
+                      onChange={handleEditChange}
+                    >
+                      <option value="Available">
+                        Available
+                      </option>
+                      <option value="In Use">
+                        In Use
+                      </option>
+                      <option value="Maintenance">
+                        Maintenance
+                      </option>
+                    </select>
+                  ) : (
+                    vehicle.status
+                  )}
+                </td>
+
+                <td>
+                  {vehicle.is_active
+                    ? "Active"
+                    : "Inactive"}
+                </td>
+
+                <td>
+                  {editingId === vehicle.id ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveVehicle(vehicle.id)
+                        }
+                      >
+                        Save
+                      </button>
+
+                      {" "}
+
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startEditing(vehicle)
+                        }
+                      >
+                        Edit
+                      </button>
+
+                      {" "}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDelete(vehicle.id)
+                        }
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

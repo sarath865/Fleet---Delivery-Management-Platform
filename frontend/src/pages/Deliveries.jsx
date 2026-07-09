@@ -4,6 +4,9 @@ import Navbar from "../components/Navbar";
 
 function Deliveries() {
   const [deliveries, setDeliveries] = useState([]);
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -29,13 +32,47 @@ function Deliveries() {
         error.response?.data?.detail ||
           "Failed to load deliveries."
       );
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const fetchDrivers = async () => {
+    try {
+      const response = await api.get("/drivers/");
+      setDrivers(response.data);
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to load drivers."
+      );
+    }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const response = await api.get("/vehicles/");
+      setVehicles(response.data);
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to load vehicles."
+      );
     }
   };
 
   useEffect(() => {
-    fetchDeliveries();
+    const loadPageData = async () => {
+      setLoading(true);
+
+      await Promise.all([
+        fetchDeliveries(),
+        fetchDrivers(),
+        fetchVehicles(),
+      ]);
+
+      setLoading(false);
+    };
+
+    loadPageData();
   }, []);
 
   const handleChange = (event) => {
@@ -75,7 +112,7 @@ function Deliveries() {
         vehicle_id: "",
       });
 
-      fetchDeliveries();
+      await fetchDeliveries();
     } catch (error) {
       setError(
         error.response?.data?.detail ||
@@ -100,13 +137,59 @@ function Deliveries() {
         `Delivery status updated to ${newStatus}.`
       );
 
-      fetchDeliveries();
+      await fetchDeliveries();
     } catch (error) {
       setError(
         error.response?.data?.detail ||
           "Failed to update delivery status."
       );
     }
+  };
+
+  const handleDelete = async (deliveryId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this delivery?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    setError("");
+    setMessage("");
+
+    try {
+      await api.delete(`/deliveries/${deliveryId}`);
+
+      setMessage("Delivery deleted successfully.");
+
+      await fetchDeliveries();
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to delete delivery."
+      );
+    }
+  };
+
+  const getDriverName = (driverId) => {
+    const driver = drivers.find(
+      (driver) => driver.id === driverId
+    );
+
+    return driver
+      ? driver.full_name
+      : "Unknown Driver";
+  };
+
+  const getVehicleNumber = (vehicleId) => {
+    const vehicle = vehicles.find(
+      (vehicle) => vehicle.id === vehicleId
+    );
+
+    return vehicle
+      ? vehicle.vehicle_number
+      : "Unknown Vehicle";
   };
 
   if (loading) {
@@ -224,29 +307,53 @@ function Deliveries() {
         <br />
 
         <div>
-          <label>Driver ID</label>
+          <label>Select Driver</label>
           <br />
-          <input
-            type="number"
+          <select
             name="driver_id"
             value={formData.driver_id}
             onChange={handleChange}
             required
-          />
+          >
+            <option value="">
+              Select a driver
+            </option>
+
+            {drivers.map((driver) => (
+              <option
+                key={driver.id}
+                value={driver.id}
+              >
+                {driver.full_name} - {driver.license_number}
+              </option>
+            ))}
+          </select>
         </div>
 
         <br />
 
         <div>
-          <label>Vehicle ID</label>
+          <label>Select Vehicle</label>
           <br />
-          <input
-            type="number"
+          <select
             name="vehicle_id"
             value={formData.vehicle_id}
             onChange={handleChange}
             required
-          />
+          >
+            <option value="">
+              Select a vehicle
+            </option>
+
+            {vehicles.map((vehicle) => (
+              <option
+                key={vehicle.id}
+                value={vehicle.id}
+              >
+                {vehicle.vehicle_number} - {vehicle.vehicle_type}
+              </option>
+            ))}
+          </select>
         </div>
 
         <br />
@@ -277,10 +384,11 @@ function Deliveries() {
               <th>Weight</th>
               <th>Priority</th>
               <th>Scheduled Time</th>
-              <th>Driver ID</th>
-              <th>Vehicle ID</th>
+              <th>Driver</th>
+              <th>Vehicle</th>
               <th>Status</th>
               <th>Update Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -295,8 +403,15 @@ function Deliveries() {
                 <td>{delivery.package_weight}</td>
                 <td>{delivery.priority}</td>
                 <td>{delivery.scheduled_time}</td>
-                <td>{delivery.driver_id}</td>
-                <td>{delivery.vehicle_id}</td>
+
+                <td>
+                  {getDriverName(delivery.driver_id)}
+                </td>
+
+                <td>
+                  {getVehicleNumber(delivery.vehicle_id)}
+                </td>
+
                 <td>{delivery.status}</td>
 
                 <td>
@@ -319,6 +434,16 @@ function Deliveries() {
                       Completed
                     </option>
                   </select>
+                </td>
+
+                <td>
+                  <button
+                    onClick={() =>
+                      handleDelete(delivery.id)
+                    }
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}

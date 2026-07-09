@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.models.vehicle import Vehicle
+from app.models.delivery import Delivery
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate
 
 
@@ -75,8 +76,22 @@ def delete_vehicle(
 
     vehicle = get_vehicle_by_id(db, vehicle_id)
 
-    db.delete(vehicle)
+    assigned_delivery = (
+        db.query(Delivery)
+        .filter(Delivery.vehicle_id == vehicle_id)
+        .first()
+    )
 
+    if assigned_delivery:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Cannot delete this vehicle because the vehicle "
+                "is assigned to an existing delivery."
+            ),
+        )
+
+    db.delete(vehicle)
     db.commit()
 
     return {

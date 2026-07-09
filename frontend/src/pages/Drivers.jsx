@@ -8,6 +8,16 @@ function Drivers() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [editingId, setEditingId] = useState(null);
+
+  const [editData, setEditData] = useState({
+    full_name: "",
+    license_number: "",
+    phone_number: "",
+    vehicle_id: "",
+    is_available: true,
+  });
+
   const [formData, setFormData] = useState({
     full_name: "",
     license_number: "",
@@ -77,6 +87,92 @@ function Drivers() {
       setError(
         error.response?.data?.detail ||
           "Failed to create driver."
+      );
+    }
+  };
+
+  const startEditing = (driver) => {
+    setError("");
+    setSuccess("");
+
+    setEditingId(driver.id);
+
+    setEditData({
+      full_name: driver.full_name,
+      license_number: driver.license_number,
+      phone_number: driver.phone_number,
+      vehicle_id: driver.vehicle_id ?? "",
+      is_available: driver.is_available,
+    });
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value, type, checked } = event.target;
+
+    setEditData({
+      ...editData,
+      [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const saveDriver = async (driverId) => {
+    setError("");
+    setSuccess("");
+
+    const updatedDriver = {
+      full_name: editData.full_name,
+      license_number: editData.license_number,
+      phone_number: editData.phone_number,
+      vehicle_id: editData.vehicle_id
+        ? Number(editData.vehicle_id)
+        : null,
+      is_available: editData.is_available,
+    };
+
+    try {
+      await api.put(
+        `/drivers/${driverId}`,
+        updatedDriver
+      );
+
+      setSuccess("Driver updated successfully.");
+      setEditingId(null);
+
+      await fetchDrivers();
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to update driver."
+      );
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  const handleDelete = async (driverId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this driver?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.delete(`/drivers/${driverId}`);
+
+      setSuccess("Driver deleted successfully.");
+
+      await fetchDrivers();
+    } catch (error) {
+      setError(
+        error.response?.data?.detail ||
+          "Failed to delete driver."
       );
     }
   };
@@ -159,7 +255,9 @@ function Drivers() {
 
         <br />
 
-        <button type="submit">Create Driver</button>
+        <button type="submit">
+          Create Driver
+        </button>
       </form>
 
       {success && <p>{success}</p>}
@@ -184,6 +282,7 @@ function Drivers() {
               <th>Vehicle ID</th>
               <th>Availability</th>
               <th>Active</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
@@ -191,19 +290,127 @@ function Drivers() {
             {drivers.map((driver) => (
               <tr key={driver.id}>
                 <td>{driver.id}</td>
-                <td>{driver.full_name}</td>
-                <td>{driver.license_number}</td>
-                <td>{driver.phone_number}</td>
+
                 <td>
-                  {driver.vehicle_id ?? "Not Assigned"}
+                  {editingId === driver.id ? (
+                    <input
+                      type="text"
+                      name="full_name"
+                      value={editData.full_name}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    driver.full_name
+                  )}
                 </td>
+
                 <td>
-                  {driver.is_available
-                    ? "Available"
-                    : "Unavailable"}
+                  {editingId === driver.id ? (
+                    <input
+                      type="text"
+                      name="license_number"
+                      value={editData.license_number}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    driver.license_number
+                  )}
                 </td>
+
                 <td>
-                  {driver.is_active ? "Active" : "Inactive"}
+                  {editingId === driver.id ? (
+                    <input
+                      type="text"
+                      name="phone_number"
+                      value={editData.phone_number}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    driver.phone_number
+                  )}
+                </td>
+
+                <td>
+                  {editingId === driver.id ? (
+                    <input
+                      type="number"
+                      name="vehicle_id"
+                      value={editData.vehicle_id}
+                      onChange={handleEditChange}
+                    />
+                  ) : (
+                    driver.vehicle_id ?? "Not Assigned"
+                  )}
+                </td>
+
+                <td>
+                  {editingId === driver.id ? (
+                    <label>
+                      <input
+                        type="checkbox"
+                        name="is_available"
+                        checked={editData.is_available}
+                        onChange={handleEditChange}
+                      />
+                      Available
+                    </label>
+                  ) : driver.is_available ? (
+                    "Available"
+                  ) : (
+                    "Unavailable"
+                  )}
+                </td>
+
+                <td>
+                  {driver.is_active
+                    ? "Active"
+                    : "Inactive"}
+                </td>
+
+                <td>
+                  {editingId === driver.id ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveDriver(driver.id)
+                        }
+                      >
+                        Save
+                      </button>
+
+                      {" "}
+
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          startEditing(driver)
+                        }
+                      >
+                        Edit
+                      </button>
+
+                      {" "}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDelete(driver.id)
+                        }
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
